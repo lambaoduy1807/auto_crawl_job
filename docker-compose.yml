@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+
+  api:
+    build: .
+    container_name: crawl_api
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - ./job_crawler/.env
+
+    environment:
+      RABBITMQ_QUEUE: crawl_queue
+      CRAWL_DIR: /app/job_crawler
+      REDIS_URL: redis://redis:6379/0
+
+      # PostgreSQL
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/job_crawler
+
+    depends_on:
+      - redis
+      - postgres
+
+    command:
+      [
+        "uvicorn",
+        "job_crawler.api:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload"
+      ]
+
+    volumes:
+      - .:/app
+
+    restart: unless-stopped
+
+
+  worker:
+    build: .
+    container_name: crawl_worker
+    init: true
+    shm_size: 1gb
+
+    env_file:
+      - ./job_crawler/.env
+
+    environment:
+      RABBITMQ_QUEUE: crawl_queue
+      CRAWL_DIR: /app/job_crawler
+      REDIS_URL: redis://redis:6379/0
+
+      # PostgreSQL
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/job_crawler
+
+    depends_on:
+      - redis
+      - postgres
+
+    command:
+      [
+        "python",
+        "-m",
+        "job_crawler.rabbit.consumer"
+      ]
+
+    volumes:
+      - .:/app
+
+    restart: unless-stopped
+
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: crawl_n8n
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+    depends_on:
+      api:
+        condition: service_started
+
+    restart: unless-stopped
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: crawl_redis
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    command: redis-server --appendonly yes
+
+    restart: unless-stopped
+
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: crawl_postgres
+
+    ports:
+      - "5432:5432"
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: job_crawler
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    restart: unless-stopped
+  
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: crawl_pgadmin
+
+    ports:
+      - "5050:80"
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    depends_on:
+      - postgres
+
+    restart: unless-stopped
+
+
+volumes:
+  n8n_data:
+  redis_data:
+  postgres_data:
+  pgadmin_data:

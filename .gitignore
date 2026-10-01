@@ -1,0 +1,42 @@
+# Python environments and generated files
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+build/
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs and local crawler diagnostics
+*.log
+logs/
+*_debug.html
+*_list.html
+*_detail.html
+*_first_detail.html
+.crawl4ai/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini

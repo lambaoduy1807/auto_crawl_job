@@ -1,0 +1,11 @@
+﻿
+scrapy==2.19.0
+fastapi
+uvicorn
+pika
+python-dotenv
+redis
+SQLAlchemy
+psycopg[binary]
+crawl4ai
+patchright==1.63.0

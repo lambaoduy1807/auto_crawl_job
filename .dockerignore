@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+.git/
+.gitignore
+
+jobs.json
+
+*.log
+
+.pytest_cache/
+.mypy_cache/
+
+.env
+
