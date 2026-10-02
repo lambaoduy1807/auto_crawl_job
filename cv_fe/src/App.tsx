@@ -232,7 +232,15 @@ export default function App() {
     if (matchFilter !== 'ALL') list = list.filter(j => j.matchLevel === matchFilter)
     if (expFilter !== 'ALL') list = list.filter(j => j.experience === expFilter)
     if (modelFilter !== 'ALL') list = list.filter(j => j.workModel === modelFilter)
-    list.sort((a, b) => sortAsc ? a.matchScore - b.matchScore : b.matchScore - a.matchScore)
+    const updatedAtTime = (value: string) => {
+      const timestamp = Date.parse(value)
+      return Number.isNaN(timestamp) ? 0 : timestamp
+    }
+    list.sort((a, b) =>
+      sortAsc
+        ? updatedAtTime(a.updatedAt) - updatedAtTime(b.updatedAt)
+        : updatedAtTime(b.updatedAt) - updatedAtTime(a.updatedAt),
+    )
     return list
   }, [jobs, search, tableSearch, matchFilter, expFilter, modelFilter, sortAsc])
 
@@ -442,7 +450,7 @@ export default function App() {
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={sortAsc ? "M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" : "M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"} />
                 </svg>
-                Score {sortAsc ? '↑' : '↓'}
+                Updated at {sortAsc ? '↑' : '↓'}
               </button>
 
               <span className="text-xs text-gray-400 font-medium">{filtered.length} jobs</span>
