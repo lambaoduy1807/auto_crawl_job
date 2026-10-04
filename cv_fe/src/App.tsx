@@ -170,6 +170,9 @@ export default function App() {
   const [expFilter, setExpFilter] = useState<'ALL' | ExperienceLevel>('ALL')
   const [modelFilter, setModelFilter] = useState<'ALL' | WorkModel>('ALL')
   const [sortAsc, setSortAsc] = useState(false)
+  const [createdFrom, setCreatedFrom] = useState('')
+  const [createdTo, setCreatedTo] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [expandedId, setExpandedId] = useState<string | number | null>(null)
   const [tableSearch, setTableSearch] = useState('')
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
@@ -232,6 +235,20 @@ export default function App() {
     if (matchFilter !== 'ALL') list = list.filter(j => j.matchLevel === matchFilter)
     if (expFilter !== 'ALL') list = list.filter(j => j.experience === expFilter)
     if (modelFilter !== 'ALL') list = list.filter(j => j.workModel === modelFilter)
+    if (createdFrom) {
+      const from = new Date(`${createdFrom}T00:00:00`).getTime()
+      list = list.filter(j => {
+        const createdAt = Date.parse(j.createdAt)
+        return !Number.isNaN(createdAt) && createdAt >= from
+      })
+    }
+    if (createdTo) {
+      const to = new Date(`${createdTo}T23:59:59.999`).getTime()
+      list = list.filter(j => {
+        const createdAt = Date.parse(j.createdAt)
+        return !Number.isNaN(createdAt) && createdAt <= to
+      })
+    }
     const updatedAtTime = (value: string) => {
       const timestamp = Date.parse(value)
       return Number.isNaN(timestamp) ? 0 : timestamp
@@ -242,7 +259,19 @@ export default function App() {
         : updatedAtTime(b.updatedAt) - updatedAtTime(a.updatedAt),
     )
     return list
-  }, [jobs, search, tableSearch, matchFilter, expFilter, modelFilter, sortAsc])
+  }, [jobs, search, tableSearch, matchFilter, expFilter, modelFilter, sortAsc, createdFrom, createdTo])
+
+  const pageSize = 10
+  const pageCount = Math.ceil(filtered.length / pageSize)
+  const pageJobs = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, tableSearch, matchFilter, expFilter, modelFilter, createdFrom, createdTo])
+
+  useEffect(() => {
+    if (pageCount > 0 && currentPage > pageCount) setCurrentPage(pageCount)
+  }, [pageCount, currentPage])
 
   const stats = useMemo(() => {
     if (jobs.length === 0) return { total: 0, cvs: 0, matched: 0, avgScore: 0 }
@@ -442,6 +471,27 @@ export default function App() {
                 <option value="On-site">On-site</option>
               </select>
 
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Created from
+                <input
+                  type="date"
+                  value={createdFrom}
+                  max={createdTo || undefined}
+                  onChange={e => setCreatedFrom(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Created to
+                <input
+                  type="date"
+                  value={createdTo}
+                  min={createdFrom || undefined}
+                  onChange={e => setCreatedTo(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                />
+              </label>
+
               {/* Sort */}
               <button
                 onClick={() => setSortAsc(p => !p)}
@@ -477,7 +527,7 @@ export default function App() {
                     </td>
                   </tr>
                 )}
-                {filtered.map(job => {
+                {pageJobs.map(job => {
                   const expanded = expandedId === job.id
                   const mc = matchColor[job.matchLevel as keyof typeof matchColor] || { badge: 'bg-gray-50 text-gray-700 border border-gray-200', dot: 'bg-gray-500', score: 'text-gray-700' }
                   return (
@@ -611,9 +661,30 @@ export default function App() {
           {/* Footer */}
           <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              Showing {filtered.length} of {jobs.length} jobs · Last refreshed just now
+              Showing {filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} filtered jobs ({jobs.length} total)
             </p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <span className="min-w-20 text-center text-xs text-gray-500">
+                  Page {pageCount === 0 ? 0 : currentPage} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(page => Math.min(pageCount, page + 1))}
+                  disabled={currentPage >= pageCount}
+                  className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span className="text-xs text-gray-500">AI matching active</span>
             </div>
