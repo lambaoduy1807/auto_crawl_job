@@ -1,9 +1,14 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { fetchJobMatches, markJobApplied, markJobNotApplied } from './api'
 
 type MatchLevel = 'HIGH' | 'MEDIUM' | 'LOW' | string
 type WorkModel = 'Remote' | 'Hybrid' | 'On-site' | string
 type ExperienceLevel = 'Intern' | 'Fresher' | 'Junior' | 'Senior' | string
+
+function formatCreatedAt(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('vi-VN')
+}
 
 interface Job {
   id: number | string
@@ -26,6 +31,7 @@ interface Job {
   requirements: string
   benefits: string
   aiExplanation: string
+  coverLetter: string
   allMatchedSkills: string[]
   allMissingSkills: string[]
   experienceMatch: boolean | null
@@ -93,10 +99,83 @@ function parseSkillList(value: string | null) {
     .filter(Boolean)
 }
 
+function TextField({ title, content, actions }: { title: string; content: string; actions?: ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const displayContent = content || '—'
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-400">{title}</h4>
+        <div className="flex shrink-0 items-center gap-2">
+          {actions}
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            disabled={!content.trim()}
+            className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            View all
+          </button>
+        </div>
+      </div>
+      <div className="max-h-36 overflow-y-auto rounded-lg border border-gray-200 bg-white/80 px-3 py-2">
+        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">{displayContent}</p>
+      </div>
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={event => {
+            if (event.target === event.currentTarget) setIsOpen(false)
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') setIsOpen(false)
+          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 p-4"
+        >
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setIsOpen(false)}
+                aria-label="Close dialog"
+                className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+              >
+                Close
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">{displayContent}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ExpandedRow({ job }: { job: Job }) {
+  const [copiedCoverLetter, setCopiedCoverLetter] = useState(false)
+
+  const copyCoverLetter = async () => {
+    if (!job.coverLetter.trim()) return
+
+    try {
+      await navigator.clipboard.writeText(job.coverLetter)
+      setCopiedCoverLetter(true)
+      window.setTimeout(() => setCopiedCoverLetter(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy cover letter:', error)
+    }
+  }
+
   return (
     <tr>
-      <td colSpan={8} className="px-0 py-0">
+      <td colSpan={6} className="px-0 py-0">
         <div className="border-t border-indigo-100 bg-gradient-to-b from-indigo-50/60 to-white px-6 py-5">
           <dl className="mb-5">
             <div className="w-fit min-w-32 border-b border-gray-200/80 pb-2">
@@ -108,22 +187,13 @@ function ExpandedRow({ job }: { job: Job }) {
           <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
             {/* Left */}
             <div className="space-y-4">
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Job Description</h4>
-                <p className="whitespace-pre-wrap break-words text-sm text-gray-700 leading-relaxed">{job.description || '—'}</p>
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Benefits</h4>
-                <p className="whitespace-pre-wrap break-words text-sm text-gray-700 leading-relaxed">{job.benefits || '—'}</p>
-              </div>
+              <TextField title="Job Description" content={job.description} />
+              <TextField title="Benefits" content={job.benefits} />
             </div>
 
             {/* Middle */}
             <div className="space-y-4">
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Requirements</h4>
-                <p className="whitespace-pre-wrap break-words text-sm text-gray-700 leading-relaxed">{job.requirements || '—'}</p>
-              </div>
+              <TextField title="Requirements" content={job.requirements} />
             </div>
 
             {/* Right */}
@@ -154,6 +224,20 @@ function ExpandedRow({ job }: { job: Job }) {
                   </div>
                 </div>
               </div>
+              <TextField
+                title="Cover Letter"
+                content={job.coverLetter}
+                actions={(
+                  <button
+                    type="button"
+                    onClick={() => void copyCoverLetter()}
+                    disabled={!job.coverLetter.trim()}
+                    className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {copiedCoverLetter ? 'Copied' : 'Copy'}
+                  </button>
+                )}
+              />
             </div>
           </div>
         </div>
@@ -165,16 +249,13 @@ function ExpandedRow({ job }: { job: Job }) {
 export default function App() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [matchFilter, setMatchFilter] = useState<'ALL' | MatchLevel>('ALL')
-  const [expFilter, setExpFilter] = useState<'ALL' | ExperienceLevel>('ALL')
-  const [modelFilter, setModelFilter] = useState<'ALL' | WorkModel>('ALL')
+  const [locationFilter, setLocationFilter] = useState('ALL')
+  const [appliedFilter, setAppliedFilter] = useState<'ALL' | 'APPLIED' | 'NOT_APPLIED'>('ALL')
   const [sortAsc, setSortAsc] = useState(false)
   const [createdFrom, setCreatedFrom] = useState('')
   const [createdTo, setCreatedTo] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [expandedId, setExpandedId] = useState<string | number | null>(null)
-  const [tableSearch, setTableSearch] = useState('')
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
   const [applyError, setApplyError] = useState('')
 
@@ -205,6 +286,7 @@ export default function App() {
           requirements: item.requirements ?? '',
           benefits: item.benefits ?? '',
           aiExplanation: item.match_reason ?? '',
+          coverLetter: item.cover_letter ?? '',
           allMatchedSkills: matchedSkills,
           allMissingSkills: missingSkills,
           experienceMatch: item.experience_match,
@@ -230,11 +312,9 @@ export default function App() {
 
   const filtered = useMemo(() => {
     let list = [...jobs]
-    const q = (search + tableSearch).toLowerCase().trim()
-    if (q) list = list.filter(j => j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q))
-    if (matchFilter !== 'ALL') list = list.filter(j => j.matchLevel === matchFilter)
-    if (expFilter !== 'ALL') list = list.filter(j => j.experience === expFilter)
-    if (modelFilter !== 'ALL') list = list.filter(j => j.workModel === modelFilter)
+    if (locationFilter !== 'ALL') list = list.filter(j => j.location === locationFilter)
+    if (appliedFilter === 'APPLIED') list = list.filter(j => j.isApplied === true)
+    if (appliedFilter === 'NOT_APPLIED') list = list.filter(j => j.isApplied !== true)
     if (createdFrom) {
       const from = new Date(`${createdFrom}T00:00:00`).getTime()
       list = list.filter(j => {
@@ -259,7 +339,7 @@ export default function App() {
         : updatedAtTime(b.updatedAt) - updatedAtTime(a.updatedAt),
     )
     return list
-  }, [jobs, search, tableSearch, matchFilter, expFilter, modelFilter, sortAsc, createdFrom, createdTo])
+  }, [jobs, locationFilter, appliedFilter, sortAsc, createdFrom, createdTo])
 
   const pageSize = 10
   const pageCount = Math.ceil(filtered.length / pageSize)
@@ -267,7 +347,12 @@ export default function App() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, tableSearch, matchFilter, expFilter, modelFilter, createdFrom, createdTo])
+  }, [locationFilter, appliedFilter, createdFrom, createdTo])
+
+  const locations = useMemo(
+    () => [...new Set(jobs.map(job => job.location).filter(location => location && location !== 'Unknown Location'))].sort(),
+    [jobs],
+  )
 
   useEffect(() => {
     if (pageCount > 0 && currentPage > pageCount) setCurrentPage(pageCount)
@@ -324,19 +409,6 @@ export default function App() {
           <div className="w-px h-5 bg-gray-200 mx-1" />
 
           <span className="text-sm font-medium text-gray-500 hidden sm:block">Job Matching Dashboard</span>
-
-          {/* Search */}
-          <div className="flex-1 max-w-xs ml-auto relative hidden md:block">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search jobs..."
-              className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all"
-            />
-          </div>
 
           {/* Refresh */}
           <button onClick={loadData} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all">
@@ -420,57 +492,7 @@ export default function App() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Filters bar */}
           <div className="px-5 py-3.5 border-b border-gray-100 flex flex-wrap gap-2 items-center">
-            {/* Table search */}
-            <div className="relative min-w-[180px] flex-1 max-w-xs">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                value={tableSearch}
-                onChange={e => setTableSearch(e.target.value)}
-                placeholder="Filter by title or company…"
-                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all"
-              />
-            </div>
-
             <div className="flex flex-wrap gap-2 ml-auto items-center">
-              {/* Match level */}
-              <select
-                value={matchFilter}
-                onChange={e => setMatchFilter(e.target.value as any)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
-              >
-                <option value="ALL">All Levels</option>
-                <option value="HIGH">High Match</option>
-                <option value="MEDIUM">Medium Match</option>
-                <option value="LOW">Low Match</option>
-              </select>
-
-              {/* Experience */}
-              <select
-                value={expFilter}
-                onChange={e => setExpFilter(e.target.value as any)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
-              >
-                <option value="ALL">All Experience</option>
-                <option value="Intern">Intern</option>
-                <option value="Fresher">Fresher</option>
-                <option value="Junior">Junior</option>
-                <option value="Senior">Senior</option>
-              </select>
-
-              {/* Work model */}
-              <select
-                value={modelFilter}
-                onChange={e => setModelFilter(e.target.value as any)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
-              >
-                <option value="ALL">All Models</option>
-                <option value="Remote">Remote</option>
-                <option value="Hybrid">Hybrid</option>
-                <option value="On-site">On-site</option>
-              </select>
-
               <label className="flex items-center gap-2 text-xs text-gray-500">
                 Created from
                 <input
@@ -490,6 +512,31 @@ export default function App() {
                   onChange={e => setCreatedTo(e.target.value)}
                   className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
                 />
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Location
+                <select
+                  value={locationFilter}
+                  onChange={e => setLocationFilter(e.target.value)}
+                  className="max-w-48 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
+                >
+                  <option value="ALL">All locations</option>
+                  {locations.map(location => <option key={location} value={location}>{location}</option>)}
+                </select>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Application
+                <select
+                  value={appliedFilter}
+                  onChange={e => setAppliedFilter(e.target.value as typeof appliedFilter)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
+                >
+                  <option value="ALL">All statuses</option>
+                  <option value="APPLIED">Applied</option>
+                  <option value="NOT_APPLIED">Not applied</option>
+                </select>
               </label>
 
               {/* Sort */}
@@ -512,7 +559,7 @@ export default function App() {
             <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  {['Job', 'Location', 'Exp.', 'CV', 'Match Score', 'Matched Skills', 'Missing Skills', 'Action'].map(col => (
+                  {['Job', 'Location', 'Exp.', 'CV', 'Match Score', 'Action'].map(col => (
                     <th key={col} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       {col}
                     </th>
@@ -522,7 +569,7 @@ export default function App() {
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-sm text-gray-400">
+                    <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
                       No jobs match the current filters.
                     </td>
                   </tr>
@@ -546,6 +593,9 @@ export default function App() {
                             <div className="min-w-0">
                               <p title={job.title} className="font-medium text-gray-900 leading-snug line-clamp-2 break-words text-sm">{job.title}</p>
                               <p title={job.company} className="mt-0.5 max-w-full truncate text-xs text-gray-500">{job.company}</p>
+                              {formatCreatedAt(job.createdAt) && (
+                                <p className="mt-0.5 text-xs text-gray-400">Created at: {formatCreatedAt(job.createdAt)}</p>
+                              )}
                               {job.isApplied ? (
                                 <button
                                   type="button"
@@ -586,7 +636,7 @@ export default function App() {
 
                         {/* Experience */}
                         <td className="px-4 py-3.5 max-w-[160px] min-w-0">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${expColor[job.experience] || 'bg-gray-50 text-gray-700 border border-gray-200'}`}>
+                          <span title={job.experience} className={`inline-flex max-w-full truncate items-center px-2 py-0.5 rounded-full text-xs font-medium ${expColor[job.experience] || 'bg-gray-50 text-gray-700 border border-gray-200'}`}>
                             {job.experience}
                           </span>
                         </td>
@@ -609,20 +659,6 @@ export default function App() {
                               <MatchBadge level={job.matchLevel} />
                             </div>
                             <ScoreBar score={job.matchScore} level={job.matchLevel} />
-                          </div>
-                        </td>
-
-                        {/* Matched */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex flex-wrap gap-1">
-                            {job.matchedSkills.map(s => <SkillTag key={s} label={s} variant="match" />)}
-                          </div>
-                        </td>
-
-                        {/* Missing */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex flex-wrap gap-1">
-                            {job.missingSkills.map(s => <SkillTag key={s} label={s} variant="miss" />)}
                           </div>
                         </td>
 

@@ -51,6 +51,7 @@ class DBJobMatch(Base):
     position_match = Column(Boolean)
 
     match_reason = Column(String)
+    cover_letter = Column(String)
 
     created_at = Column(String)
     updated_at = Column(String)

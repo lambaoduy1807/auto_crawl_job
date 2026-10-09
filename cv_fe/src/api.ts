@@ -21,6 +21,7 @@ export interface JobMatch {
   language_match: boolean | null;
   position_match: boolean | null;
   match_reason: string | null;
+  cover_letter: string | null;
   created_at: string | null;
   updated_at: string | null;
   source: string | null;
