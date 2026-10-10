@@ -250,6 +250,7 @@ export default function App() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [locationFilter, setLocationFilter] = useState('ALL')
+  const [cvFilter, setCvFilter] = useState('ALL')
   const [appliedFilter, setAppliedFilter] = useState<'ALL' | 'APPLIED' | 'NOT_APPLIED'>('ALL')
   const [sortAsc, setSortAsc] = useState(false)
   const [createdFrom, setCreatedFrom] = useState('')
@@ -313,6 +314,7 @@ export default function App() {
   const filtered = useMemo(() => {
     let list = [...jobs]
     if (locationFilter !== 'ALL') list = list.filter(j => j.location === locationFilter)
+    if (cvFilter !== 'ALL') list = list.filter(j => j.cv === cvFilter)
     if (appliedFilter === 'APPLIED') list = list.filter(j => j.isApplied === true)
     if (appliedFilter === 'NOT_APPLIED') list = list.filter(j => j.isApplied !== true)
     if (createdFrom) {
@@ -339,7 +341,7 @@ export default function App() {
         : updatedAtTime(b.updatedAt) - updatedAtTime(a.updatedAt),
     )
     return list
-  }, [jobs, locationFilter, appliedFilter, sortAsc, createdFrom, createdTo])
+  }, [jobs, locationFilter, cvFilter, appliedFilter, sortAsc, createdFrom, createdTo])
 
   const pageSize = 10
   const pageCount = Math.ceil(filtered.length / pageSize)
@@ -347,12 +349,13 @@ export default function App() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [locationFilter, appliedFilter, createdFrom, createdTo])
+  }, [locationFilter, cvFilter, appliedFilter, createdFrom, createdTo])
 
   const locations = useMemo(
     () => [...new Set(jobs.map(job => job.location).filter(location => location && location !== 'Unknown Location'))].sort(),
     [jobs],
   )
+  const cvs = useMemo(() => [...new Set(jobs.map(job => job.cv).filter(cv => cv && cv !== 'Unknown CV'))].sort(), [jobs])
 
   useEffect(() => {
     if (pageCount > 0 && currentPage > pageCount) setCurrentPage(pageCount)
@@ -523,6 +526,18 @@ export default function App() {
                 >
                   <option value="ALL">All locations</option>
                   {locations.map(location => <option key={location} value={location}>{location}</option>)}
+                </select>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                CV
+                <select
+                  value={cvFilter}
+                  onChange={e => setCvFilter(e.target.value)}
+                  className="max-w-48 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 cursor-pointer"
+                >
+                  <option value="ALL">All CVs</option>
+                  {cvs.map(cv => <option key={cv} value={cv}>{cv}</option>)}
                 </select>
               </label>
 
