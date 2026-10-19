@@ -268,7 +268,9 @@ export default function App() {
         const missingSkills = parseSkillList(item.missing_skills)
         return {
           id: item.id ?? item.job_id ?? index,
-          recordId: String(item.id ?? ''),
+          // The API expects the database row ID. Trim string IDs so padded
+          // values cannot turn into paths containing encoded spaces.
+          recordId: String(item.id ?? '').trim(),
           jobId: item.job_id ?? '',
           title: item.title ?? 'Unknown Title',
           company: item.company ?? 'Unknown Company',

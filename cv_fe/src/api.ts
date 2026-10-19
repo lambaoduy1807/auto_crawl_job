@@ -44,20 +44,22 @@ export const fetchJobMatches = async (): Promise<JobMatch[]> => {
   }
 };
 
-export const markJobApplied = async (matchId: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/job-matches/${encodeURIComponent(matchId)}/apply`, {
+const updateAppliedStatus = async (matchId: string, isApplied: boolean): Promise<void> => {
+  const normalizedId = String(matchId).trim();
+  if (!/^\d+$/.test(normalizedId)) {
+    throw new Error(`Invalid job match ID: ${JSON.stringify(matchId)}`);
+  }
+
+  const action = isApplied ? 'apply' : 'unapply';
+  const response = await fetch(`${API_BASE_URL}/job-matches/${encodeURIComponent(normalizedId)}/${action}`, {
     method: 'POST',
   });
   if (!response.ok) {
-    throw new Error(`Error marking job applied: ${response.statusText}`);
+    const detail = await response.text();
+    throw new Error(`Failed to ${action} job match (${response.status}): ${detail || response.statusText}`);
   }
 };
 
-export const markJobNotApplied = async (matchId: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/job-matches/${encodeURIComponent(matchId)}/unapply`, {
-    method: 'POST',
-  });
-  if (!response.ok) {
-    throw new Error(`Error reverting applied status: ${response.statusText}`);
-  }
-};
+export const markJobApplied = (matchId: string): Promise<void> => updateAppliedStatus(matchId, true);
+
+export const markJobNotApplied = (matchId: string): Promise<void> => updateAppliedStatus(matchId, false);
