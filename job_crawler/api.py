@@ -261,16 +261,16 @@ def get_job_matches(db: Session = Depends(get_db)):
 
 
 @app.post("/job-matches/{match_id}/apply")
-def mark_job_applied(match_id: int, db: Session = Depends(get_db)):
+def mark_job_applied(match_id: str, db: Session = Depends(get_db)):
     return _set_job_applied(match_id, True, db)
 
 
 @app.post("/job-matches/{match_id}/unapply")
-def mark_job_not_applied(match_id: int, db: Session = Depends(get_db)):
+def mark_job_not_applied(match_id: str, db: Session = Depends(get_db)):
     return _set_job_applied(match_id, False, db)
 
 
-def _set_job_applied(match_id: int, is_applied: bool, db: Session):
+def _set_job_applied(match_id: str, is_applied: bool, db: Session):
     match = db.query(DBJobMatch).filter(DBJobMatch.id == match_id).first()
     if match is None:
         raise HTTPException(status_code=404, detail="Job match not found")

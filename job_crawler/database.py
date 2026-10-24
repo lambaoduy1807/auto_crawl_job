@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, String, Boolean, BigInteger
+from sqlalchemy import create_engine, Column, String, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Lấy URL kết nối database từ biến môi trường, hoặc dùng giá trị mặc định
@@ -24,7 +24,8 @@ Base = declarative_base()
 class DBJobMatch(Base):
     __tablename__ = "jobs"
 
-    id = Column(BigInteger, primary_key=True, index=True)
+    # The existing PostgreSQL jobs.id column is character-based.
+    id = Column(String, primary_key=True, index=True)
     job_id = Column(String, index=True)
     title = Column(String)
     company = Column(String)
