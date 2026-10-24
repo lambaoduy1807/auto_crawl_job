@@ -1,6 +1,21 @@
 # Job Crawler & CV Matcher
 
 Dự án thu thập tin tuyển dụng từ nhiều trang việc làm, cung cấp API để chạy và theo dõi các lượt crawl, đồng thời có giao diện dashboard để xem kết quả matching giữa job và CV.
+## Workflow & Demo
+
+### 1.Workflow
+
+<img width="1256" height="557" alt="image" src="https://github.com/user-attachments/assets/6795a2bf-b5f8-488c-8e94-e66fe6333e58" />
+
+Workflow được xây dựng bằng n8n nhằm tự động hóa quy trình thu thập tin tuyển dụng và đối chiếu CV với công việc. Hệ thống lấy CV từ Google Drive, trích xuất thông tin ứng viên, thu thập tin tuyển dụng thông qua API và lọc các công việc phù hợp. Sau đó, AI phân tích mức độ tương thích giữa CV và mô tả công việc, xác định kỹ năng phù hợp, kỹ năng còn thiếu và tạo thư ứng tuyển cá nhân hóa (Cover Letter). Kết quả được chuẩn hóa và lưu vào PostgreSQL để hiển thị trên dashboard, giúp người dùng dễ dàng đánh giá mức độ phù hợp và quản lý trạng thái ứng tuyển.
+
+### 2. Demo Video
+
+Xem video demo để khám phá cách hệ thống hoạt động, từ khởi chạy crawl đến theo dõi kết quả matching trên dashboard.
+
+https://youtu.be/zNgEZfUh7mc
+
+
 
 ## Chức năng chính
 
